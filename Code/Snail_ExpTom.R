@@ -1,7 +1,7 @@
 ####BELOSTOMA FUNCTIONAL RESPONSE ACROSS VARYING HABITAT COMPLEXITY####
 ###EXPERIMENTAL DESIGN AND ANALYSIS 2018###
 
-#load packages needed
+#load packages needed for analysis
 library(dplyr)
 library(ggplot2)
 library(car)
