@@ -122,6 +122,31 @@ png("Results/Fig3.png",res=600,height=7,width=3.5,units="in")
 plot_grid(fig3a,fig3b,labels=c("A","B"),align="hv",ncol=1)
 dev.off()
 
+#polynomial regresion
+typeI.no<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity,
+              data=snail_total,family=binomial,subset=c(Complexity=="none"))
+typeII.no<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2),
+              data=snail_total,family=binomial,subset=c(Complexity=="none"))
+typeIII.no<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2)+I(SnailDensity^3),
+                data=snail_total,family=binomial,subset=c(Complexity=="none"))
+AIC(typeI.no,typeII.no,typeIII.no)
+
+typeI.low<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity,
+              data=snail_total,family=binomial,subset=c(Complexity=="low"))
+typeII.low<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2),
+               data=snail_total,family=binomial,subset=c(Complexity=="low"))
+typeIII.low<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2)+I(SnailDensity^3),
+                data=snail_total,family=binomial,subset=c(Complexity=="low"))
+AIC(typeI.low,typeII.low,typeIII.low)
+
+typeI.hi<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity,
+               data=snail_total,family=binomial,subset=c(Complexity=="high"))
+typeII.hi<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2),
+                data=snail_total,family=binomial,subset=c(Complexity=="high"))
+typeIII.hi<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2)+I(SnailDensity^3),
+                 data=snail_total,family=binomial,subset=c(Complexity=="high"))
+AIC(typeI.hi,typeII.hi,typeIII.hi)
+
 # determine Type II vs Type III using frair package (from Pritchard et al. 2017, Methods in Ecol and Evol)
 ft.no<-frair_test(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="none",])
 ft.low<-frair_test(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="low",])
