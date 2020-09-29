@@ -51,19 +51,19 @@ figS2a<-ggplot(data = filter(snail_total,Complexity=="none"),aes(SnailDensity,Pr
   geom_point(position=position_jitter(width=0.05),size=2)+
   theme_cowplot()+
   labs(x="",y="Proportion Killed")+
-  binomial_smooth(formula= y ~ poly(x, 2),color="black",se=F)+
+  binomial_smooth(formula= y ~ x+I(x^2),color="black",se=F)+
   scale_x_continuous(breaks=c(2,4,8,16),labels=c(2,4,8,16))
 figS2b<-ggplot(data = filter(snail_total,Complexity=="low"),aes(SnailDensity,ProportionKilled))+
   geom_point(position=position_jitter(width=0.05),size=2)+
   theme_cowplot()+
   labs(x="",y="Proportion Killed")+
-  binomial_smooth(formula= y ~ poly(x, 2),color="black",se=F)+
+  binomial_smooth(formula= y ~ x+I(x^2),color="black",se=F)+
   scale_x_continuous(breaks=c(2,4,8,16),labels=c(2,4,8,16))
 figS2c<-ggplot(data = filter(snail_total,Complexity=="high"),aes(SnailDensity,ProportionKilled))+
   geom_point(position=position_jitter(width=0.05),size=2)+
   theme_cowplot()+
   labs(x=expression("Initial"~italic(Helisoma)~"Number"),y="Proportion Killed")+
-  binomial_smooth(formula= y ~ poly(x, 2),color="black",se=F)+
+  binomial_smooth(formula= y ~ x+I(x^2),color="black",se=F)+
   scale_x_continuous(breaks=c(2,4,8,16),labels=c(2,4,8,16))
 png("Results/FigS2.png",res=600,width=3.5,height=9,units="in")
 plot_grid(figS2a,figS2b,figS2c,ncol=1,labels=LETTERS[1:3])
@@ -154,49 +154,53 @@ ft.high<-frair_test(NumberKilled~SnailDensity,data=snail_total[snail_total$Compl
 
 #Alternatively, test flexible functional response by Real (1977)
 none_flexpnr<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="none",],response = "flexpnr",
-                  start=list(b=1,h=0.5,q=0),fixed=list(T=96/24))
+                  start=list(b=1,h=0.1,q=0),fixed=list(T=4))
 low_flexpnr<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="low",],response = "flexpnr",
-                  start=list(b=0.05,h=0.5,q=0.01),fixed=list(T=96/24))
+                  start=list(b=1,h=0.1,q=0),fixed=list(T=4))
 high_flexpnr<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="high",],response = "flexpnr",
-                  start=list(b=1,h=0.5,q=0),fixed=list(T=96/24))
+                  start=list(b=1,h=0.1,q=0),fixed=list(T=4))
 summary(none_flexpnr$fit)
-summary(low_flexpnr$fit)#doesn't converge
+summary(low_flexpnr$fit)#doesn't converge unless q fixed at 0
 summary(high_flexpnr$fit)
 
 #get bootstrap confidence intervals
 noneboot_flxpnr<-frair_boot(none_flexpnr,nboot = 5000)
 confint(noneboot_flxpnr,citypes="bca")
-highboot_flxpnr<-frair_boot(high_flexpnr,nboot = 5000)
+lowboot_flxpnr<-frair_boot(low_flexpnr,nboot = 5000)
+confint(lowboot_flxpnr,citypes="bca")
+highboot_flxpnr<-frair_boot(high_flexpnr,nboot = 500)
 confint(highboot_flxpnr,citypes="bca")
 
 #compare two models where the fit converges
 frair_compare(none_flexpnr,high_flexpnr)
+frair_compare(low_flexpnr,high_flexpnr)#can't do
+frair_compare(none_flexpnr,low_flexpnr)#can't do
 
-#try additional type III model for low complexity treatment
+# #try additional type III model for low complexity treatment
 low_hasseliii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="low",],response = "hassIIInr",
                          start=list(b=1,h=1,c=0.2),fixed=list(T=96/24))
-summary(low_hasseliii$fit)#still doesn't converge, so likely a type II response
+summary(low_hasseliii$fit)#still doesn't converge
 
-#Test Roger's Type II models to compare treatments
-none_typeii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="none",],response = "rogersII",
-                      start=list(a=1,h=1),fixed=list(T=96/24))
-low_typeii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="low",],response = "rogersII",
-                      start=list(a=1,h=1),fixed=list(T=96/24))
-high_typeii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="high",],response = "rogersII",
-                      start=list(a=1,h=1),fixed=list(T=96/24))
-summary(none_typeii$fit)
-summary(low_typeii$fit)
-summary(high_typeii$fit)
-
-#do treatment comparisons based on Juliano (2001)
-frair_compare(none_typeii,low_typeii)
-frair_compare(none_typeii,high_typeii)
-frair_compare(low_typeii,high_typeii)
-
-#get bootstrapped confidence intervals
-noneboot<-frair_boot(none_typeii,nboot = 5000)
-lowboot<-frair_boot(low_typeii,nboot = 5000)
-highboot<-frair_boot(high_typeii,nboot = 5000)
+# #Test Roger's Type II models to compare treatments
+# none_typeii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="none",],response = "rogersII",
+#                       start=list(a=1,h=1),fixed=list(T=96/24))
+# low_typeii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="low",],response = "rogersII",
+#                       start=list(a=1,h=1),fixed=list(T=96/24))
+# high_typeii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="high",],response = "rogersII",
+#                       start=list(a=1,h=1),fixed=list(T=96/24))
+# summary(none_typeii$fit)
+# summary(low_typeii$fit)
+# summary(high_typeii$fit)
+# 
+# #do treatment comparisons based on Juliano (2001)
+# frair_compare(none_typeii,low_typeii)
+# frair_compare(none_typeii,high_typeii)
+# frair_compare(low_typeii,high_typeii)
+# 
+# #get bootstrapped confidence intervals
+# noneboot<-frair_boot(none_typeii,nboot = 5000)
+# lowboot<-frair_boot(low_typeii,nboot = 5000)
+# highboot<-frair_boot(high_typeii,nboot = 5000)
 
 #plot best fitting model for each species
 png("Results/Fig1.png",res=600,height=9,width=3.5,units="in")
@@ -209,13 +213,13 @@ drawpoly(noneboot_flxpnr, col=adjustcolor("#009E73",alpha.f=0.5))
 lines(noneboot_flxpnr,lwd=3)
 points(noneboot_flxpnr,pch=20, col="#009E73",cex=2)
 mtext(text="A",font=2,line=3,side=2,at=14,las=1,cex=1.75)
-plot(lowboot,xlab="",ylab="Number Killed",
+plot(lowboot_flxpnr,xlab="",ylab="Number Killed",
      cex.axis=2,cex.lab=2,frame=F,las=1,ylim=c(0,14),xaxt="n")
 axis(1,at=c(2,4,8,16),cex.axis=2,pos=0)
 abline(h=0)
-drawpoly(lowboot, col=adjustcolor("#E69F00",alpha.f=0.5))
-lines(lowboot,lwd=3,lty=2)
-points(lowboot,pch=20, col="#E69F00",cex=2)
+drawpoly(lowboot_flxpnr, col=adjustcolor("#E69F00",alpha.f=0.5))
+lines(lowboot_flxpnr,lwd=3,lty=2)
+points(lowboot_flxpnr,pch=20, col="#E69F00",cex=2)
 mtext(text="B",font=2,line=3,side=2,at=14,las=1,cex=1.75)
 plot(highboot_flxpnr,xlab=expression("Initial"~italic(Helisoma)~"Number"),ylab="Number Killed",
      frame=F,las=1,ylim=c(0,14),cex.axis=2,cex.lab=2,xaxt="n")
