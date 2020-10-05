@@ -6,32 +6,82 @@ library(car)
 library(cowplot)
 library(emdbook)
 library(bbmle)
+library(deSolve)
 
-## Rogers random predator equations:
-rogers.pred.2 <- function(prey.density,a,h,Tt,P) {
-  prey.density - lambertW(a*h*prey.density*exp(-a*(P*Tt-h*prey.density)))/(a*h)
+#------------------------------------------------------------------------------
+# type II FR
+#------------------------------------------------------------------------------
+
+eaten.bolker = function(N0, b, h, q=0, Tt, P) {
+  a = b*N0^q
+  Neaten.est = N0 - lambertW(a*h*N0*exp(-a*(P*Tt-h*N0)))/(a*h)
+  return(Neaten.est)
 }
 
-rogers.pred.3 <- function(prey.density,a,h,Tt,P) {
-  prey.density - lambertW((a*prey.density)*h*prey.density*exp(-(a*prey.density)*(P*Tt-h*prey.density)))/((a*prey.density)*h)
+nll.bolker = function(Neaten, N0, b, h, q=0, Tt, P){
+  if(b <= 0 || h <= 0) return(Inf)
+  y = eaten.bolker(N0=N0, b=b, h=h, q=q, Tt=Tt, P=P)
+  nll = -1*sum(dbinom(x = Neaten,
+                      size = N0, 
+                      prob = y/N0,
+                      log=T))
+  return(nll)
 }
 
-## Likelihood function for Rogers
-NLL.rogers.2 = function(a, h, Tt, P) {
-  if (a < 0 || h < 0)
-    return(NA)
-  prop.exp = rogers.pred.2(prey.density, a, h, P, Tt)/prey.density
-  - sum(dbinom(eaten, prob = prop.exp, size = prey.density,
-               log = TRUE))
+#------------------------------------------------------------------------------
+# type III FR
+#------------------------------------------------------------------------------
+
+eaten.hassell = function(N0, b, h, Tt, P){
+  p = -(b*h*N0^2 + b*P*Tt*N0 + 1) / (b*h*N0)
+  q = P*Tt*N0/h
+  Neaten.est = -(p/2) - sqrt( (p/2)^2 - q )
+  return(Neaten.est)
 }
 
-NLL.rogers.3 = function(a, h, Tt, P) {
-  if (a < 0 || h < 0)
-    return(NA)
-  prop.exp = rogers.pred.3(prey.density, a, h, P, Tt)/prey.density
-  - sum(dbinom(eaten, prob = prop.exp, size = prey.density,
-               log = TRUE))
+nll.hassell = function(Neaten, N0, b, h, Tt, P){
+  if(b <= 0 || h <= 0) return(Inf)
+  y = eaten.hassell(N0=N0, b=b, h=h, Tt=Tt, P=P)
+  nll = -1*sum(dbinom(x = Neaten, 
+                      size = N0, 
+                      prob = y/N0, 
+                      log=T))
+  return(nll)
 }
+
+#------------------------------------------------------------------------------
+# generalized FR
+#------------------------------------------------------------------------------
+
+eq.ode.general = function(t, x, parms){
+  with(as.list(parms),{
+    dN = -b * x[1]^(1+q) / (1 + b * h * x[1]^(1+q)) * P
+    return(list(c(dN)))
+  })
+}
+
+eaten.ode.general = function(N0, b, h, q, Tt, P, steps=100){
+  Neaten.est = vector()
+  for(i.eaten in 1:length(N0)){
+    Neaten.est[i.eaten] = N0[i.eaten] - lsoda(y = N0[i.eaten],
+                                              times = seq(0,Tt[i.eaten],length=steps),
+                                              func = eq.ode.general,
+                                              parms = c(b=b, h=h, q=q, P=P[i.eaten])
+    )[length(seq(0,Tt[i.eaten],length=steps)),2]
+  }
+  return(Neaten.est)
+}
+
+nll.ode.general = function(Neaten, N0, b, h, q, Tt, P, steps=100){
+  if(b <= 0 || h <= 0) return(Inf)
+  y = eaten.ode.general(N0=N0, b=b, h=h, q=q, Tt=Tt, P=P, steps=steps)
+  nll = -1*sum(dbinom(x = Neaten, 
+                      size = N0, 
+                      prob = y/N0, 
+                      log=T))
+  return(nll)
+}
+
 
 #Set directory that is specific to your machine
 snail_data <- read.csv("Data/snail_data.csv") 
@@ -106,6 +156,9 @@ summary(size.mod)
 exp(coef(size.mod)) #to get odds ratios
 
 #plot proportion killed by water bug length (called "Width_mm" here) and snail 
+binomial_smooth <- function(...) {
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), ...)
+}
 fig3b<-ggplot(snail_total,aes(Width_mm,ProportionKilled))+
   geom_point()+
   binomial_smooth(color="black")+
@@ -154,56 +207,83 @@ Tab1$Parameter<-c("Intercept","Linear","Quadratic")
 write.csv(Tab1,"Results/NewTable1.csv")
 
 #get maximum likelihood estimates for type 2 and type 3 models
-no.t2 <- mle2(NLL.rogers.2,
-                 start = list(a = 0.3, h = 1.5),
-                 data = list(prey.density = snail_total$SnailDensity[snail_total$Complexity=="none"],
-                             eaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
+no.t2 <- mle2(nll.bolker,
+                 start = list(b = 0.3, h = 1.5),
+                 data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="none"],
+                             Neaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
                              Tt = 4,
                              P = 1))
-no.t3 <- mle2(NLL.rogers.3,
-                 start = list(a = 0.5, h =1.5),
-                 data = list(prey.density = snail_total$SnailDensity[snail_total$Complexity=="none"],
-                             eaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
+no.t3 <- mle2(nll.hassell,
+                 start = list(b = 0.5, h =1.5),
+                 data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="none"],
+                             Neaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
                              Tt = 4,
                              P = 1))
+fit.gen = mle2(minuslogl = nll.ode.general,
+               start = list(b = 1,
+                            h = 1/25,
+                            q = 0),
+               data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
+                           N0 = snail_total$SnailDensity[snail_total$Complexity=="none"],
+                           P = rep(1,nrow(snail_total[snail_total$Complexity=="none",])),
+                           Tt = rep(1,nrow(snail_total[snail_total$Complexity=="none",])))
+)
+
 no.ci<-confint(no.t3,method="quad")
 
 
-lo.t2 <- mle2(NLL.rogers.2,
-              start = list(a = 0.3, h = 1.5),
-              data = list(prey.density = snail_total$SnailDensity[snail_total$Complexity=="low"],
-                          eaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
+lo.t2 <- mle2(nll.bolker,
+              start = list(b = 0.3, h = 1.5),
+              data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="low"],
+                          Neaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
                           Tt = 4,
                           P = 1))
-lo.t3 <- mle2(NLL.rogers.3,
-              start = list(a = 0.5, h =1.5),
-              data = list(prey.density = snail_total$SnailDensity[snail_total$Complexity=="low"],
-                          eaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
+lo.t3 <- mle2(nll.hassell,
+              start = list(b = 0.5, h =1.5),
+              data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="low"],
+                          Neaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
                           Tt = 4,
                           P = 1))
+lo.g = mle2(minuslogl = nll.ode.general,
+                    start = list(b = 1,
+                                 h = 1/25,
+                                 q = 0),
+                    data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
+                                N0 = snail_total$SnailDensity[snail_total$Complexity=="low"],
+                                P = rep(1,nrow(snail_total[snail_total$Complexity=="low",])),
+                                Tt = rep(1,nrow(snail_total[snail_total$Complexity=="low",])))
+)
 low.ci<-confint(lo.t3,method="quad")
 
-snail.hi<-snail_total$SnailDensity[snail_total$Complexity=="high"]
-hi.t2 <- mle2(NLL.rogers.2,
-               start = list(a = 0.003, h = 1.5),
-               data = list(prey.density = snail_total$SnailDensity[snail_total$Complexity=="high"],
-                           eaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
+hi.t2 <- mle2(nll.bolker,
+               start = list(b = 0.3, h = 0.3),
+               data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="high"],
+                           Neaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
                            Tt = 4,
                            P = 1))
-hi.t3 <- mle2(NLL.rogers.3,
-               start = list(a = 0.005, h =1.5),
-               data = list(prey.density = snail_total$SnailDensity[snail_total$Complexity=="high"],
-                           eaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
+hi.t3 <- mle2(nll.hassell,
+               start = list(b = 0.25, h =0.05),
+               data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="high"],
+                           Neaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
                            Tt = 4,
                            P = 1))
-
+hi.g = mle2(minuslogl = nll.ode.general,
+            start = list(b = 1,
+                         h = 1/25,
+                         q = 0),
+            data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
+                        N0 = snail_total$SnailDensity[snail_total$Complexity=="high"],
+                        P = rep(1,nrow(snail_total[snail_total$Complexity=="high",])),
+                        Tt = rep(1,nrow(snail_total[snail_total$Complexity=="high",])))
+)
 hi.ci<-confint(hi.t3,method="quad")
 
 citab<-rbind(no.ci,low.ci,hi.ci)
-estimate<-c(coef(no.t3),coef(low.t3),coef(hi.t3))
+estimate<-c(coef(no.t3),coef(lo.t3),coef(hi.t3))
 Tab3<-as.data.frame(round(cbind(estimate,citab),3))
 Tab3$Treatment<-c("None","None","Low","Low","High","High")
-Tab3$Parameter<-c(rep(c("a","h"),3))
+Tab3$Parameter<-c(rep(c("b","h"),3))
+Tab3
 write.csv(Tab3,"Results/NewTable3.csv")
 
 NewFig2<-ggplot(Tab3,aes(Treatment,estimate,color=Parameter,shape=Parameter))+
@@ -213,7 +293,7 @@ NewFig2<-ggplot(Tab3,aes(Treatment,estimate,color=Parameter,shape=Parameter))+
   labs(y="Estimate")+
   scale_x_discrete(limits=c("None","Low","High"))+
   scale_color_manual(values=c("black","gray"))+
-  theme(legend.position=c(0.7,0.9))
+  theme(legend.position=c(0.1,0.9))+
 png("Results/NewFig2.png",res=500,height=3.5,width=3.5,units="in")
 NewFig2
 dev.off()
@@ -241,8 +321,8 @@ no.pl<-ggplot()+
   labs(x="",y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
   scale_x_continuous(breaks=seq(0,16,4))
-lo.y2  <- rogers.pred.2(x,coef(low.t2)[[1]],coef(low.t2)[[2]],4,1)
-lo.y3  <- rogers.pred.3(x,coef(low.t3)[[1]],coef(low.t3)[[2]],4,1)
+lo.y2  <- rogers.pred.2(x,coef(lo.t2)[[1]],coef(lo.t2)[[2]],4,1)
+lo.y3  <- rogers.pred.3(x,coef(lo.t3)[[1]],coef(lo.t3)[[2]],4,1)
 lo.pl<-ggplot()+
   geom_point(aes(snail_total$SnailDensity[snail_total$Complexity=="low"],
                  snail_total$NumberKilled[snail_total$Complexity=="low"]))+
