@@ -287,13 +287,13 @@ Tab3
 write.csv(Tab3,"Results/NewTable3.csv")
 
 NewFig2<-ggplot(Tab3,aes(Treatment,estimate,color=Parameter,shape=Parameter))+
-  geom_point()+
-  geom_linerange(aes(ymin = `2.5 %`, ymax = `97.5 %`))+
+  geom_point(position=position_dodge(width=0.5))+
+  geom_linerange(aes(ymin = `2.5 %`, ymax = `97.5 %`),position=position_dodge(width=0.5))+
   theme_cowplot()+
   labs(y="Estimate")+
   scale_x_discrete(limits=c("None","Low","High"))+
   scale_color_manual(values=c("black","gray"))+
-  theme(legend.position=c(0.1,0.9))+
+  theme(legend.position=c(0.1,0.9))
 png("Results/NewFig2.png",res=500,height=3.5,width=3.5,units="in")
 NewFig2
 dev.off()
