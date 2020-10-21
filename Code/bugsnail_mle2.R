@@ -106,6 +106,9 @@ summary(size.mod)
 exp(coef(size.mod)) #to get odds ratios
 
 #plot proportion killed by water bug length (called "Width_mm" here) and snail 
+binomial_smooth <- function(...) {
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), ...)
+}
 fig3b<-ggplot(snail_total,aes(Width_mm,ProportionKilled))+
   geom_point()+
   binomial_smooth(color="black")+
