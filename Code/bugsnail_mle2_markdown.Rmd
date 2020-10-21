@@ -1,4 +1,11 @@
+---
+title: "bugsnail_mle2_markdown"
+author: "Joe Gunn"
+date: "10/20/2020"
+output: html_document
+---
 
+```{r}
 #load packages needed for analysis
 library(dplyr)
 library(ggplot2)
@@ -7,7 +14,10 @@ library(cowplot)
 library(emdbook)
 library(bbmle)
 library(deSolve)
+```
 
+#Functional Response Equations
+```{r}
 #------------------------------------------------------------------------------
 # type II FR
 #------------------------------------------------------------------------------
@@ -28,9 +38,11 @@ nll.bolker = function(Neaten, N0, b, h, q=0, Tt, P){
   return(nll)
 }
 
+
 #------------------------------------------------------------------------------
 # type III FR
 #------------------------------------------------------------------------------
+
 
 eaten.hassell = function(N0, b, h, Tt, P){
   p = -(b*h*N0^2 + b*P*Tt*N0 + 1) / (b*h*N0)
@@ -81,13 +93,18 @@ nll.ode.general = function(Neaten, N0, b, h, q, Tt, P, steps=100){
                       log=T))
   return(nll)
 }
+```
 
 
 #Set directory that is specific to your machine
+```{r}
 snail_data <- read.csv("Data/snail_data.csv") 
 bug_size <- read.csv("Data/bug_sizes.csv")
 snail_size <- read.csv("Data/snail_size.csv")
+```
 
+#Data cleaning
+```{r}
 #order by Block, elapsed hours and tank (in that order); not a critical step but makes it look nicer
 snail_data<-snail_data[with(snail_data,order(Block,ElapsedHrs,Tank)),]
 
@@ -117,7 +134,10 @@ snail_avg<-snail_size%>%
 #merge all the data sets together
 snail_total<-merge(snail_total,bug_size,by.x=c("Block","Tank","UniqueID"),by.y=c("Block","Container","UniqueID"),all=T)
 snail_total<-merge(snail_total,snail_avg,by.x=c("Block","Tank"),by.y=c("Block","Container"),all=T)
+```
 
+#Size analysis
+```{r}
 #Analyze whether bug size and snail size varied by treatment or block
 snailsize.mod<-lm(Mean_Aperture~Complexity+SnailDensity+Block,data=snail_total)
 bugsize.mod<-lm(Width_mm~Complexity+SnailDensity+Block,data=snail_total)
@@ -173,8 +193,10 @@ fig3a<-ggplot(snail_total,aes(Mean_Aperture,ProportionKilled))+
 png("Results/Fig3.png",res=600,height=7,width=3.5,units="in")
 plot_grid(fig3a,fig3b,labels=c("A","B"),align="hv",ncol=1)
 dev.off()
+```
 
 #polynomial regression
+```{r}
 typeI.no<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity,
               data=snail_total,family=binomial,subset=c(Complexity=="none"))
 typeII.no<-glm(cbind(NumberKilled,SnailDensity-NumberKilled)~SnailDensity+I(SnailDensity^2),
@@ -205,8 +227,10 @@ Tab1<-as.data.frame(round(rbind(summary(typeII.no)$coefficients,
 Tab1$Treatment<-c("None","","","Low","","","High","","")
 Tab1$Parameter<-c("Intercept","Linear","Quadratic")
 write.csv(Tab1,"Results/NewTable1.csv")
+```
 
 #get maximum likelihood estimates for type 2 and type 3 models
+```{r}
 no.t2 <- mle2(nll.bolker,
                  start = list(b = 0.3, h = 1.5),
                  data = list(N0 = snail_total$SnailDensity[snail_total$Complexity=="none"],
@@ -347,4 +371,4 @@ hi.pl<-ggplot()+
 png("Results/NewFig1.png",res=600,height=9,width=3.5,units="in")
 plot_grid(no.pl,lo.pl,hi.pl,labels=c("A)","B)","C)"),align="hv",ncol=1)
 dev.off()
-
+```

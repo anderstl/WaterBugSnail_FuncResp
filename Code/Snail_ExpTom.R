@@ -177,8 +177,8 @@ frair_compare(low_flexpnr,high_flexpnr)#can't do
 frair_compare(none_flexpnr,low_flexpnr)#can't do
 
 # #try additional type III model for low complexity treatment
-low_hasseliii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="low",],response = "hassIIInr",
-                         start=list(b=1,h=1,c=0.2),fixed=list(T=96/24))
+low_hasseliii<-frair_fit(NumberKilled~SnailDensity,data=snail_total[snail_total$Complexity=="high",],response = "hassIIInr",
+                         start=list(b=0.5,h=0.5,c=0.2),fixed=list(T=96/24))
 summary(low_hasseliii$fit)#still doesn't converge
 
 # #Test Roger's Type II models to compare treatments
