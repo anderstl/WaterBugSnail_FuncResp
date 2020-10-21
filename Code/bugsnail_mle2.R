@@ -219,15 +219,15 @@ no.t3 <- mle2(nll.hassell,
                              Neaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
                              Tt = 4,
                              P = 1))
-fit.gen = mle2(minuslogl = nll.ode.general,
-               start = list(b = 1,
-                            h = 1/25,
-                            q = 0),
-               data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
-                           N0 = snail_total$SnailDensity[snail_total$Complexity=="none"],
-                           P = rep(1,nrow(snail_total[snail_total$Complexity=="none",])),
-                           Tt = rep(1,nrow(snail_total[snail_total$Complexity=="none",])))
-)
+# fit.gen = mle2(minuslogl = nll.ode.general,
+#                start = list(b = 1,
+#                             h = 1/25,
+#                             q = 0),
+#                data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="none"],
+#                            N0 = snail_total$SnailDensity[snail_total$Complexity=="none"],
+#                            P = rep(1,nrow(snail_total[snail_total$Complexity=="none",])),
+#                            Tt = rep(1,nrow(snail_total[snail_total$Complexity=="none",])))
+# )
 
 no.ci<-confint(no.t3,method="quad")
 
@@ -244,15 +244,15 @@ lo.t3 <- mle2(nll.hassell,
                           Neaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
                           Tt = 4,
                           P = 1))
-lo.g = mle2(minuslogl = nll.ode.general,
-                    start = list(b = 1,
-                                 h = 1/25,
-                                 q = 0),
-                    data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
-                                N0 = snail_total$SnailDensity[snail_total$Complexity=="low"],
-                                P = rep(1,nrow(snail_total[snail_total$Complexity=="low",])),
-                                Tt = rep(1,nrow(snail_total[snail_total$Complexity=="low",])))
-)
+# lo.g = mle2(minuslogl = nll.ode.general,
+#                     start = list(b = 1,
+#                                  h = 1/25,
+#                                  q = 0),
+#                     data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="low"],
+#                                 N0 = snail_total$SnailDensity[snail_total$Complexity=="low"],
+#                                 P = rep(1,nrow(snail_total[snail_total$Complexity=="low",])),
+#                                 Tt = rep(1,nrow(snail_total[snail_total$Complexity=="low",])))
+#)
 low.ci<-confint(lo.t3,method="quad")
 
 hi.t2 <- mle2(nll.bolker,
@@ -267,15 +267,15 @@ hi.t3 <- mle2(nll.hassell,
                            Neaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
                            Tt = 4,
                            P = 1))
-hi.g = mle2(minuslogl = nll.ode.general,
-            start = list(b = 1,
-                         h = 1/25,
-                         q = 0),
-            data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
-                        N0 = snail_total$SnailDensity[snail_total$Complexity=="high"],
-                        P = rep(1,nrow(snail_total[snail_total$Complexity=="high",])),
-                        Tt = rep(1,nrow(snail_total[snail_total$Complexity=="high",])))
-)
+# #hi.g = mle2(minuslogl = nll.ode.general,
+#             start = list(b = 1,
+#                          h = 1/25,
+#                          q = 0),
+#             data = list(Neaten = snail_total$NumberKilled[snail_total$Complexity=="high"],
+#                         N0 = snail_total$SnailDensity[snail_total$Complexity=="high"],
+#                         P = rep(1,nrow(snail_total[snail_total$Complexity=="high",])),
+#                         Tt = rep(1,nrow(snail_total[snail_total$Complexity=="high",])))
+#)
 hi.ci<-confint(hi.t3,method="quad")
 
 citab<-rbind(no.ci,low.ci,hi.ci)
@@ -310,8 +310,8 @@ Tab2
 write.csv(Tab2,"Results/NewTable2.csv")
 
 #make plot
-no.y2  <- rogers.pred.2(x,coef(no.t2)[[1]],coef(no.t2)[[2]],4,1)
-no.y3  <- rogers.pred.3(x,coef(no.t3)[[1]],coef(no.t3)[[2]],4,1)
+no.y2  <- eaten.bolker(x,coef(no.t2)[[1]],coef(no.t2)[[2]],0,4,1)
+no.y3  <- eaten.hassell(x,coef(no.t3)[[1]],coef(no.t3)[[2]],4,1)
 no.pl<-ggplot()+
   geom_point(aes(snail_total$SnailDensity[snail_total$Complexity=="none"],
                   snail_total$NumberKilled[snail_total$Complexity=="none"]))+
@@ -321,8 +321,8 @@ no.pl<-ggplot()+
   labs(x="",y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
   scale_x_continuous(breaks=seq(0,16,4))
-lo.y2  <- rogers.pred.2(x,coef(lo.t2)[[1]],coef(lo.t2)[[2]],4,1)
-lo.y3  <- rogers.pred.3(x,coef(lo.t3)[[1]],coef(lo.t3)[[2]],4,1)
+lo.y2  <- eaten.bolker(x,coef(lo.t2)[[1]],coef(lo.t2)[[2]],0,4,1)
+lo.y3  <- eaten.hassell(x,coef(lo.t3)[[1]],coef(lo.t3)[[2]],4,1)
 lo.pl<-ggplot()+
   geom_point(aes(snail_total$SnailDensity[snail_total$Complexity=="low"],
                  snail_total$NumberKilled[snail_total$Complexity=="low"]))+
@@ -332,8 +332,8 @@ lo.pl<-ggplot()+
   labs(x="",y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
   scale_x_continuous(breaks=seq(0,16,4))
-hi.y2  <- rogers.pred.2(x,coef(hi.t2)[[1]],coef(hi.t2)[[2]],4,1)
-hi.y3  <- rogers.pred.3(x,coef(hi.t3)[[1]],coef(hi.t3)[[2]],4,1)
+hi.y2  <- eaten.bolker(x,coef(hi.t2)[[1]],coef(hi.t2)[[2]],0,4,1)
+hi.y3  <- eaten.hassell(x,coef(hi.t3)[[1]],coef(hi.t3)[[2]],4,1)
 hi.pl<-ggplot()+
   geom_point(aes(snail_total$SnailDensity[snail_total$Complexity=="high"],
                  snail_total$NumberKilled[snail_total$Complexity=="high"]))+
