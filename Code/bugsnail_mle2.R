@@ -109,10 +109,23 @@ bug_size$UniqueID<-interaction(bug_size$Block,bug_size$Container)
 snail_size<-snail_size[!snail_size$UniqueID%in%c(1.25,1.26,2.37,2.38),]
 bug_size<-bug_size[!bug_size$UniqueID%in%c(1.25,1.26,2.37,2.38),]
 
+#make histograms of snail size by treatment
+snail_size<-merge(snail_size,snail_total[,c("Tank","SnailDensity","Complexity")],by.x="Container",by.y="Tank")
+
 #create average snail sizes for each treatment and block
 snail_avg<-snail_size%>%
   group_by(Block,Container)%>%
-  dplyr::summarise(Mean_Width=mean(Width_mm,na.rm=T),Mean_Aperture=mean(Aperture_mm,na.rm=T))
+  dplyr::summarise(Mean_Width=mean(Width_mm,na.rm=T),Mean_Aperture=mean(Aperture_mm,na.rm=T),
+                   sd_Width=sd(Width_mm,na.rm=T),sd_Aperture=sd(Aperture_mm,na.rm=T))
+
+png("Results/FigS4.png",res=500,height=5,width=7,units="in")
+snail_stdev<-ggplot(snail_total,aes(as.factor(SnailDensity),sd_Aperture,fill=Complexity))+
+  geom_boxplot()+
+  labs(x="Density",y="Aperture Standard Deviation")+
+  theme_classic()+
+  scale_fill_manual(values=c("#56B4E9","#E69F00","#009E73"),labels=c("High","Low","No"),name="Density")
+snail_stdev
+dev.off()
 
 #merge all the data sets together
 snail_total<-merge(snail_total,bug_size,by.x=c("Block","Tank","UniqueID"),by.y=c("Block","Container","UniqueID"),all=T)
@@ -312,6 +325,8 @@ write.csv(Tab2,"Results/NewTable2.csv")
 #make plot
 no.y2  <- eaten.bolker(x,coef(no.t2)[[1]],coef(no.t2)[[2]],0,4,1)
 no.y3  <- eaten.hassell(x,coef(no.t3)[[1]],coef(no.t3)[[2]],4,1)
+# no.y3upp  <- eaten.hassell(x,Tab3$`97.5 %`[[1]],Tab3$`97.5 %`[[2]],4,1)
+# no.y3low  <- eaten.hassell(x,Tab3$`2.5 %`[[1]],Tab3$`2.5 %`[[2]],4,1)
 no.pl<-ggplot()+
   geom_point(aes(snail_total$SnailDensity[snail_total$Complexity=="none"],
                   snail_total$NumberKilled[snail_total$Complexity=="none"]))+
@@ -340,6 +355,9 @@ hi.pl<-ggplot()+
   #geom_line(aes(x,hi.y2),linetype=2)+
   geom_line(aes(x,hi.y3))+
   theme_cowplot()+
+  geom_ribbon(aes(ymin = value - std,
+                  ymax = value + std),    # shadowing cnf intervals
+              fill = "steelblue2")
   labs(x=expression("Initial Number of"~italic(Helisoma)),y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
   scale_x_continuous(breaks=seq(0,16,4))
