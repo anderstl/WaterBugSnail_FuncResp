@@ -334,9 +334,7 @@ no.pl<-ggplot()+
   theme_cowplot()+
   labs(x="",y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
-  scale_x_continuous(breaks=seq(0,16,4))+
-  geom_line(aes(x,no.y3upp))+
-  geom_line(aes(x,no.y3low))
+  scale_x_continuous(breaks=seq(0,16,4))
   
 lo.y2  <- eaten.bolker(x,coef(lo.t2)[[1]],coef(lo.t2)[[2]],0,4,1)
 lo.y3  <- eaten.hassell(x,coef(lo.t3)[[1]],coef(lo.t3)[[2]],4,1)
@@ -350,9 +348,7 @@ lo.pl<-ggplot()+
   theme_cowplot()+
   labs(x="",y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
-  scale_x_continuous(breaks=seq(0,16,4))+
-  geom_line(aes(x,lo.y3upp))+
-  geom_line(aes(x,lo.y3low))
+  scale_x_continuous(breaks=seq(0,16,4))
 
 hi.y2  <- eaten.bolker(x,coef(hi.t2)[[1]],coef(hi.t2)[[2]],0,4,1)
 hi.y3  <- eaten.hassell(x,coef(hi.t3)[[1]],coef(hi.t3)[[2]],4,1)
@@ -362,9 +358,6 @@ hi.pl<-ggplot()+
   #geom_line(aes(x,hi.y2),linetype=2)+
   geom_line(aes(x,hi.y3))+
   theme_cowplot()+
-  geom_ribbon(aes(ymin = value - std,
-                  ymax = value + std),    # shadowing cnf intervals
-              fill = "steelblue2")
   labs(x=expression("Initial Number of"~italic(Helisoma)),y="Number Killed")+
   scale_y_continuous(breaks=seq(0,16,4),limits=c(0,16))+
   scale_x_continuous(breaks=seq(0,16,4))
